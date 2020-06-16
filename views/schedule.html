@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang='he'>
+  <head>
+    <meta charset='utf-8' />
+
+    <link href='fullcalendar/core/main.css' rel='stylesheet' />
+    <link href='fullcalendar/daygrid/main.css' rel='stylesheet' />
+    <link href='fullcalendar/style.css' rel='stylesheet' />
+    
+    <!-- style bootstrap -->
+    <link rel="stylesheet" href="https://cdn.rtlcss.com/bootstrap/v4.2.1/css/bootstrap.min.css" integrity="sha384-vus3nQHTD+5mpDiZ4rkEPlnkcyTP+49BhJ4wJeJunw06ZAp+wzzeBPUXr42fi8If" crossorigin="anonymous">
+
+    <!-- botstrap and jquery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdn.rtlcss.com/bootstrap/v4.2.1/js/bootstrap.min.js" integrity="sha384-a9xOd0rz8w0J8zqj1qJic7GPFfyMfoiuDjC9rqXlVOcGO/dmRqzMn34gZYDTel8k" crossorigin="anonymous"></script>
+    
+    <!-- for the cookies -->
+    <script src="js/jquery.cookie.js"></script>
+    <script src="js/jquery.ajaxfileupload.js"></script>
+    
+    <!-- <script>
+      function check_connect(){
+        connect = $.cookie("LoggedIn");
+        if (connect == undefined) {
+            window.location.href = "login.html";
+        } else {
+          console.log(typeof(connect));
+          $.post( "scripts/check_connect.py", JSON.stringify({ "cookie": connect }))
+          .done(function( data ) {
+              console.log(data);
+              myObj = JSON.parse(data);
+              
+              if (myObj.ok == false){
+                  window.location.href = "login.html";
+              }
+          });
+        }
+      }
+
+      check_connect();
+    </script> -->
+
+    <!-- fullcalendar script -->
+    <script src='fullcalendar/core/main.js'></script>
+    <script src='fullcalendar/daygrid/main.js'></script>
+    <script src='fullcalendar/interaction/main.js'></script>
+    <script src='fullcalendar/list/main.js'></script>
+
+    <script>
+
+      document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          plugins: [ 'dayGrid', 'interaction', 'list' ]
+        });
+
+        calendar.render();
+
+        $(".close").click(function(){
+          $("#time").val('00:00');
+          $('#modal').modal('hide')
+        })
+
+        $("td").click(function(e){
+          date = e.target.getAttribute("data-date");
+          $("#date").attr("value", date);
+          $('#modal').modal('show')
+        });
+
+        window.onclick = function(event) {
+          if (event.target == modal) {
+            $("#time").val('00:00');
+            $('#modal').modal('hide')
+          }
+        } 
+      });
+      
+    </script>
+    <style>
+      
+    </style>
+  </head>
+  <body dir="rtl">
+    
+    <!-- Modal -->
+    <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalLabel">בחר סרט ותאריך לתזמון</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body" style="text-align: right;">
+            <label for="video_selector">בחר סרטון</label>
+            <select name="videos" id="video_selector"></select>
+            <br>
+            <label for="date">בחר תאריך</label>
+            <input type="date" name="data" id="date">
+            <br>
+            <label for="time">בחר שעה</label>
+            <input type="time" name="time" id="time" value="00:00">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" id="send" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- the calendar -->
+    <div id="container">
+      <h2>בחר תאריך לתזמן את הפעלת הסרטון</h2>
+      <div id='calendar'>
+      </div>
+    </div>
+
+    <!-- the movies -->
+    <div id="the_movies">
+      <h2>הסרטונים שלך</h2>
+      <div id="videos" oncontextmenu="return false;"></div>
+      <hr style="width: 80%;">
+      <h3>העלאת סרטונים פרטיים:</h3>
+      <form action="uploadfile" method="post" enctype="multipart/form-data">
+        <input type="file" accept=".avi,.mp4,.mov,.wmv" id="fileid" name="myFiles" multiple>
+        <input type="submit" value="upload" id="upload">
+      </form>
+      <hr style="width: 80%;">
+      <a href="#"><h2>לרכישת סרטונים נוספים</h2></a>
+    </div>
+  </body>
+  <script>
+
+    $.get("get_videos", function(result){
+      let videos_res = JSON.parse(result);
+      let videos_arr = Array.from(videos_res);
+			console.log(videos_arr);
+			videos_arr.forEach(element => {
+        if (element != ',') {
+          $("#videos").append('<video width="320" controls controlsList="nodownload"><source src=movies/' + element + '.mp4 type="video/mp4"></video>');          
+          $("#video_selector").append('<option value="movies/' + element + '.mp4">'+element+'</option>')
+        }
+      });
+    });
+
+    $("#send").click(function(){
+      $('#modal').modal('hide')
+      let url = $("#video_selector").val();
+      let date_time = $("#date").val() + " " + $("#time").val();
+      let cookie = $.cookie("LoggedIn");
+      $.post( "schedule_a_video", { "url": url, "datetime": date_time, "cookie": cookie })
+      .done(function( data ) {
+          console.log(data);
+      });
+    });
+    
+    // $("#upload").click(function(){
+    //   ajaxfileupload({
+    //     'action': 'scripts/save_file.py',
+    //     'onComplete': function(response) {
+    //       console.log('custom handler for file:');
+    //       alert(JSON.stringify(response));
+    //     },
+    //     'onStart': function() {
+    //       if(weWantedTo) return false; // cancels upload
+    //     },
+    //     'onCancel': function() {
+    //       console.log('no file selected');
+    //     }
+    //   });
+    // });
+  </script>
+</html>
